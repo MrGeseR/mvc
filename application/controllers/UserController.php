@@ -19,7 +19,14 @@ class UserController extends BaseController
     public function actionIndex($array = [])
     {
 
-        $row = $this->user->getAll();
+        $row = $this->user
+            ->where([
+                'id' => 3,
+                'name' => "jora"
+            ])
+            ->where(['name' => "qwerty"])
+            ->orWhere(['name' => 'asdfg'])
+            ->get();
 
         return $this->view('user', [
             'result' => $row,

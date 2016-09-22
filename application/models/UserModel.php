@@ -18,7 +18,8 @@ class UserModel extends BaseModel
         $this->tableName = strtolower($temp);
     }
 
-    public function index(){
+    public function index()
+    {
 
     }
 
@@ -32,11 +33,36 @@ class UserModel extends BaseModel
 
     public function get()
     {
-        $stmt = $this->connection->prepare('SELECT ' . $this->selectItems . ' FROM ' . $this->tableName . '' . $this->conditions . '' . $this->order);
-        $stmt->execute();
+        $where = '';
+        $prepareWhere = '';
+        $executeWhere = [];
+        $countWhere = 1;
+        foreach ($this->conditions as $key => $value) {
+            $executeWhere[$key] = $value;
+            if ($countWhere === 1) {
+                $where .= ' WHERE ' . $key . $value;
+                $countWhere++;
+            }
+            $where .= ' AND ' . $key . '=:' . $key;
+        }
+        $orWhere = $this->alterConditions ? ' OR WHERE ' : '';
+        $prepareOrWhere = '';
+//        $executeOrWhere = [];
+        foreach ($this->alterConditions as $key => $value) {
+            $prepareOrWhere .= $key . '=:' . $key;
+            if (isset($executeWhere[$key])) {
+                $key;
+            }
+            $executeWhere[$key] = $value;
+        }
+        $stmt = $this->connection->prepare('SELECT ' . $this->selectItems . ' FROM ' . $this->tableName .
+            $where . $orWhere . $this->order);
+        dd($stmt);
+        $stmt->execute($executeWhere);
         $row = $stmt->fetchAll();
         $this->selectItems = '*';
-        $this->conditions = '';
+        $this->conditions = [];
+        $this->alterConditions = [];
         $this->order = '';
         $this->row = $row;
         return $row;

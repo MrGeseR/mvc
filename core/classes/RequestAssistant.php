@@ -5,8 +5,9 @@ namespace core\classes;
 trait RequestAssistant
 {
     protected $selectItems = '*';
-    protected $conditions = '';
+    protected $conditions = [];
     protected $order = '';
+    protected $alterConditions = [];
 
     public function __call($name, $arguments)
     {
@@ -40,37 +41,91 @@ trait RequestAssistant
 
     public function where(...$params)
     {
-        $this->conditions = ' WHERE ';
         if (is_array($params[0])) {
             if (!isset($params[0][0])) {                                                                // если массив ассоциативный
                 foreach ($params[0] as $key => $value) {
-                    if (!is_int($value)) {
-                        $this->conditions .= $key . '=\'' . $value . '\' AND ';
-                    } else {
-                        $this->conditions .= $key . '=' . $value . ' AND ';
-                    }
+//                    if ($this->conditions) {
+//                        $key = ' ' . $key;
+//                    }
+//                    if (isset($this->conditions[$key])){
+//                        $key = ' '.$key;
+//                    }
+                    array_push($this->conditions ,[$key, '=', $value]);
                 }
             } else {
-                $this->conditions = '';
+                $this->conditions = [];
                 die('Invalid params');
             }
-            $this->conditions = substr($this->conditions, 0, -(strlen(' AND ')));
-        } elseif ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
-            $this->conditions .= $params[0] . ' BETWEEN ' . $params[2] . ' AND ' . $params[3];
-        } elseif (count($params) === 2) {                                                        //если вид запроса ('id',1)
-            $this->conditions .= $params[0] . '=' . $params[1];
-        } elseif (count($params) === 3) {                                                        //если вид запроса ('id','>=',1)
-            $this->conditions .= $params[0] . '' . $params[1] . '' . $params[2];
         } else {
-            $this->conditions = '';
-            die('Invalid params');
+//            $params[0] = ' ' . $params[0];
+//            if (isset($this->conditions[$params[0]])){
+//                $params[0] = ' '.$params[0];
+//            }
+            if ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
+                array_push($this->conditions, [$params[0] , ' BETWEEN ' . $params[2] . ' AND ' . $params[3]);//
+            } elseif
+            (count($params) === 2
+            ) {                                                        //если вид запроса ('id',1)
+                array_push($this->conditions, $params[0] . '=' . $params[1]);
+            } elseif
+            (count($params) === 3
+            ) {                                                        //если вид запроса ('id','>=',1)
+                array_push($this->conditions, $params[0] . $params[1] . $params[2]);
+            } else {
+                $this->conditions = [];
+                die('Invalid params');
+            }
         }
+        var_dump($this->conditions);
+        return $this;
 
     }
 
     public function whereBetween($field, $min, $max)
     {
-        $this->conditions = 'WHERE ' . $field . ' BETWEEN ' . $min . ' AND ' . $max;
+        $this->where($field, 'between', $min, $max);
+        return $this;
+    }
+
+    public function orWhere(...$params)
+    {
+        if (is_array($params[0])) {
+            if (!isset($params[0][0])) {                                                                // если массив ассоциативный
+                foreach ($params[0] as $key => $value) {
+                    if ($this->alterConditions) {
+                        $key = ' ' . $key;
+                    }
+                    if (isset($this->alterConditions[$key])){
+                        $key = ' '.$key;
+                    }
+                    $this->alterConditions[$key] = '=' . $value;
+                }
+            } else {
+                $this->alterConditions = [];
+                die('Invalid params');
+            }
+        } elseif ($this->alterConditions) {
+            $params[0] = ' ' . $params[0];
+            if (isset($this->alterConditions[$params[0]])){
+                $params[0] = ' '.$params[0];
+            }
+            if ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
+                array_push($this->alterConditions, $params[0] . ' BETWEEN ' . $params[2] . ' AND ' . $params[3]);//
+            } elseif
+            (count($params) === 2
+            ) {                                                        //если вид запроса ('id',1)
+                array_push($this->alterConditions, $params[0] . '=' . $params[1]);
+            } elseif
+            (count($params) === 3
+            ) {                                                        //если вид запроса ('id','>=',1)
+                array_push($this->alterConditions, $params[0] . $params[1] . $params[2]);
+            } else {
+                $this->alterConditions = [];
+                die('Invalid params');
+            }
+        }
+        var_dump($this->alterConditions);
+        return $this;
     }
 
     public function orderBy(...$params)
