@@ -10,17 +10,17 @@
 <body>
 <?php
 $result = $params['result'][0];
-echo '<table>';
+echo '<table style="border-collapse: collapse">';
 echo '<tr>';
 foreach ($result as $key => $value) {
-    echo '<td>' . $key . '</td>';
+    echo '<td style="border: 2px dotted greenyellow">' . $key . '</td>';
 }
 echo '</tr>';
 
 foreach ($params['result'] as $key => $value) {
     echo '<tr>';
     foreach ($value as $field => $item) {
-        echo '<td>' . $item . '</td>';
+        echo '<td style="border: 2px dotted greenyellow">' . $item . '</td>';
     }
     echo '</tr>';
 }

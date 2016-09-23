@@ -34,31 +34,37 @@ class UserModel extends BaseModel
     public function get()
     {
         $where = '';
-        $prepareWhere = '';
-        $executeWhere = [];
-        $countWhere = 1;
-        foreach ($this->conditions as $key => $value) {
-            $executeWhere[$key] = $value;
-            if ($countWhere === 1) {
-                $where .= ' WHERE ' . $key . $value;
-                $countWhere++;
+        $orWhere = '';
+        if ($this->conditions) {
+            $where = ' WHERE ';
+            $countWhere = 1;
+            foreach ($this->conditions as $value) {
+                if ($countWhere === 1) {
+                    $where .= $value;
+                    $countWhere++;
+                    continue;
+                }
+                $where .= ' AND ' . $value;
             }
-            $where .= ' AND ' . $key . '=:' . $key;
         }
-        $orWhere = $this->alterConditions ? ' OR WHERE ' : '';
-        $prepareOrWhere = '';
-//        $executeOrWhere = [];
-        foreach ($this->alterConditions as $key => $value) {
-            $prepareOrWhere .= $key . '=:' . $key;
-            if (isset($executeWhere[$key])) {
-                $key;
+        if ($this->alterConditions) {
+            $orWhere = ' OR ';
+            $countOrWhere = 1;
+            foreach ($this->alterConditions as $value) {
+                if ($countOrWhere === 1) {
+                    $orWhere .= $value;
+                    $countOrWhere++;
+                    continue;
+                }
+                $orWhere .= ' AND ' . $value;
             }
-            $executeWhere[$key] = $value;
         }
         $stmt = $this->connection->prepare('SELECT ' . $this->selectItems . ' FROM ' . $this->tableName .
             $where . $orWhere . $this->order);
-        dd($stmt);
-        $stmt->execute($executeWhere);
+        foreach ($this->binding as $key=>$value){
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute($this->binding);
         $row = $stmt->fetchAll();
         $this->selectItems = '*';
         $this->conditions = [];

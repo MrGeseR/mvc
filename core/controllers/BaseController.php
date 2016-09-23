@@ -8,7 +8,6 @@ class BaseController
 
     public function __construct()
     {
-        dd($this->viewFolder);
     }
 
     protected function view($view, $params = [])

@@ -6,6 +6,8 @@ trait RequestAssistant
 {
     protected $selectItems = '*';
     protected $conditions = [];
+    protected $prepare = [];
+    protected $binding = [];
     protected $order = '';
     protected $alterConditions = [];
 
@@ -44,40 +46,53 @@ trait RequestAssistant
         if (is_array($params[0])) {
             if (!isset($params[0][0])) {                                                                // если массив ассоциативный
                 foreach ($params[0] as $key => $value) {
-//                    if ($this->conditions) {
-//                        $key = ' ' . $key;
-//                    }
-//                    if (isset($this->conditions[$key])){
-//                        $key = ' '.$key;
-//                    }
-                    array_push($this->conditions ,[$key, '=', $value]);
+                    $temp = $this->bindings($key,$value);
+                    array_push($this->conditions, $key . '=' . $temp);
                 }
             } else {
                 $this->conditions = [];
                 die('Invalid params');
             }
         } else {
-//            $params[0] = ' ' . $params[0];
-//            if (isset($this->conditions[$params[0]])){
-//                $params[0] = ' '.$params[0];
-//            }
             if ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
-                array_push($this->conditions, [$params[0] , ' BETWEEN ' . $params[2] . ' AND ' . $params[3]);//
+                $temp = $this->bindings($params[1], $params[3]);
+                $temp1 = $this->bindings($params[1], $params[4]);
+                array_push($this->conditions, $params[0]. ' BETWEEN ' . $temp . ' AND ' . $temp1);
             } elseif
-            (count($params) === 2
-            ) {                                                        //если вид запроса ('id',1)
-                array_push($this->conditions, $params[0] . '=' . $params[1]);
+            (count($params) === 2                                                              //если вид запроса ('id',1)
+            ) {
+                $temp = $this->bindings($params[0],$params[1]);
+                array_push($this->conditions, $params[0] .'='. $temp);
             } elseif
             (count($params) === 3
             ) {                                                        //если вид запроса ('id','>=',1)
-                array_push($this->conditions, $params[0] . $params[1] . $params[2]);
+                $temp = $this->bindings($params[0],$params[2]);
+                array_push($this->conditions, $params[0]. $params[1]. $temp);
             } else {
                 $this->conditions = [];
                 die('Invalid params');
             }
         }
-        var_dump($this->conditions);
         return $this;
+
+    }
+
+    public function bindings($field, $param)
+    {
+        if(isset($this->binding[':'.$field])){
+            for ($i = 1; $i < 10; $i++) {
+                if(isset($this->binding[':'.$field.$i])){
+                    continue;
+                } else {
+                    $this->binding[':' . $field . $i] = $param;
+                    break;
+                }
+            }
+            return ':' . $field . $i;
+        } else {
+            $this->binding[':'.$field] = $param;
+            return ':'.$field;
+        }
 
     }
 
@@ -92,39 +107,33 @@ trait RequestAssistant
         if (is_array($params[0])) {
             if (!isset($params[0][0])) {                                                                // если массив ассоциативный
                 foreach ($params[0] as $key => $value) {
-                    if ($this->alterConditions) {
-                        $key = ' ' . $key;
-                    }
-                    if (isset($this->alterConditions[$key])){
-                        $key = ' '.$key;
-                    }
-                    $this->alterConditions[$key] = '=' . $value;
+                    $temp = $this->bindings($key,$value);
+                    array_push($this->alterConditions, $key . '=' . $temp);
                 }
             } else {
                 $this->alterConditions = [];
                 die('Invalid params');
             }
-        } elseif ($this->alterConditions) {
-            $params[0] = ' ' . $params[0];
-            if (isset($this->alterConditions[$params[0]])){
-                $params[0] = ' '.$params[0];
-            }
+        } else {
             if ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
-                array_push($this->alterConditions, $params[0] . ' BETWEEN ' . $params[2] . ' AND ' . $params[3]);//
+                $temp = $this->bindings($params[1], $params[3]);
+                $temp1 = $this->bindings($params[1], $params[4]);
+                array_push($this->alterConditions, $params[0]. ' BETWEEN ' . $temp . ' AND ' . $temp1);
             } elseif
-            (count($params) === 2
-            ) {                                                        //если вид запроса ('id',1)
-                array_push($this->alterConditions, $params[0] . '=' . $params[1]);
+            (count($params) === 2                                                              //если вид запроса ('id',1)
+            ) {
+                $temp = $this->bindings($params[0],$params[1]);
+                array_push($this->alterConditions, $params[0] .'='. $temp);
             } elseif
             (count($params) === 3
             ) {                                                        //если вид запроса ('id','>=',1)
-                array_push($this->alterConditions, $params[0] . $params[1] . $params[2]);
+                $temp = $this->bindings($params[0],$params[2]);
+                array_push($this->alterConditions, $params[0]. $params[1]. $temp);
             } else {
                 $this->alterConditions = [];
                 die('Invalid params');
             }
         }
-        var_dump($this->alterConditions);
         return $this;
     }
 

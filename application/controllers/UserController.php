@@ -22,10 +22,10 @@ class UserController extends BaseController
         $row = $this->user
             ->where([
                 'id' => 3,
-                'name' => "jora"
+                'user' => "jora"
             ])
-            ->where(['name' => "qwerty"])
-            ->orWhere(['name' => 'asdfg'])
+            ->where(['user' => "qwerty"])
+            ->orWhere(['user' => 'asdfg'])
             ->get();
 
         return $this->view('user', [
