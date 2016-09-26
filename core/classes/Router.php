@@ -5,26 +5,69 @@ namespace core\classes;
 
 final class Router
 {
+    protected $routes;
+
     public function __construct()
     {
-        $this->routes = include '../configs/routes.php'; // переделать под конфиг
+        $this->routes = include '../configs/routes.php';
     }
 
     private function getActionName($name)
     {
-        return $actionName = 'action'.ucfirst($name);
+        return 'action' . ucfirst($name);
     }
 
-    private function getControllerName($name)
+    private function getController($name, $module = '')
     {
-        return $ControllerName = ucfirst($name) . 'Controller';
+        $controllerName = ucfirst($name) . 'Controller';
+        if(!$module){
+            return '\\application\\controllers\\' . $controllerName;
+        } else {
+            $moduleName = $this->getModuleName($module);
+            return '\\modules\\' . $moduleName . '\\controllers\\' . $controllerName;
+        }
     }
 
     private function getModuleName($name)
     {
-        return $ModuleName = ucfirst($name) . 'Module';
+        return ucfirst($name) . 'Module';
     }
 
+    private function getParams($controller, $action, $params)
+    {
+        $newParams = '';
+        $a = new \ReflectionMethod($controller, $action);
+        $wanted = $a->getParameters();
+        for ($i = 0; $i < count($wanted);$i++){
+            if(key_exists($wanted[$i]->name, $params)){
+                $newParams[] = $params[$wanted[$i]->name];
+            } else {
+                die('U must enter '.$wanted[$i]->name);
+            }
+        }
+        $controller->$action(...$newParams);
+
+    }
+
+    private function Methods($parts, $params = [])
+    {
+        $count = count($parts);
+
+        switch ($count) {
+            case 0:
+                $this->defaultAction($params);
+                break;
+            case 1:
+                $this->controller($parts, $params);
+                break;
+            case 2:
+                $this->controllerWithAction($parts, $params);
+                break;
+            case 3:
+                $this->module($parts, $params);
+                break;
+        }
+    }
 
     public function parseUrl($url)
     {
@@ -39,58 +82,37 @@ final class Router
         } else {
             $parts = explode('/', $uri);
         }
-
-        $count = count($parts);
-
-        switch ($count) {
-            case 0:
-                $this->defaultAction($params);
-                break;
-            case 1:
-                $this->model($parts, $params);
-                break;
-            case 2:
-                $this->modelWithAction($parts, $params);
-                break;
-            case 3:
-                $this->module($parts, $params);
-                break;
-        };
-
+        $this->Methods($parts, $params);
     }
 
     private function defaultAction($params = [])
     {
-        $controllerName = 'DefaultController';
-        $controller = '\\application\\controllers\\' . $controllerName;
+        $controller = $this->getController(\Config::get('DefaultController'));
         $controllerObject = new $controller();
-        $controllerObject->actionIndex($params);
+        $actionName = $this->getActionName(\Config::get('DefaultAction'));
+        $this->getParams($controllerObject, $actionName, $params);
     }
 
-    private function model($parts, $params = [])
+    private function controller($parts, $params = [])
     {
-        $controllerName = $this->getControllerName($parts[0]);
-        $controller = '\\application\\controllers\\' . $controllerName;
+        $controller = $this->getController($parts[0]);
         $controllerObject = new $controller();
-        $controllerObject->actionIndex($params);
+        $this->getParams($controllerObject, 'actionIndex', $params);
     }
 
-    private function modelWithAction($parts, $params = [])
+    private function controllerWithAction($parts, $params = [])
     {
-        $controllerName = $this->getControllerName($parts[0]);
-        $controller = \Config::get('controllers') . $controllerName;
+        $controller = $this->getController($parts[0]);
         $controllerObject = new $controller();
         $actionName = $this->getActionName($parts[1]);
-        $controllerObject->$actionName($params);
+        $this->getParams($controllerObject, $actionName, $params);
     }
 
     private function module($parts, $params = [])
     {
-        $moduleName = $this->getModuleName($parts[0]);
-        $controllerName = $this->getControllerName($parts[1]);
-        $controller = '\\modules\\' . $moduleName . '\\controllers\\' . $controllerName;
+        $controller = $this->getController($parts[1], $parts[0]);
         $controllerObject = new $controller();
         $actionName = $this->getActionName($parts[2]);
-        $controllerObject->$actionName($params);
+        $this->getParams($controllerObject, $actionName, $params);
     }
 }

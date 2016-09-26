@@ -16,16 +16,20 @@ class UserController extends BaseController
         $this->user = new UserModel();
     }
 
-    public function actionIndex($array = [])
+    public function actionParams($id, $name)
     {
+            echo 'Id = '.$id;
+            echo '   Name = '.$name;
+    }
 
+
+
+    public function actionIndex($id)
+    {
         $row = $this->user
-            ->where([
-                'id' => 3,
-                'user' => "jora"
-            ])
-            ->where(['user' => "qwerty"])
-            ->orWhere(['user' => 'asdfg'])
+//
+            ->where('id', '=', $id)
+//            ->orWhere(['id' => 1])
             ->get();
 
         return $this->view('user', [

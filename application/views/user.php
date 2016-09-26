@@ -10,7 +10,7 @@
 <body>
 <?php
 $result = $params['result'][0];
-echo '<table style="border-collapse: collapse">';
+echo '<table style="border-collapse: collapse ">';
 echo '<tr>';
 foreach ($result as $key => $value) {
     echo '<td style="border: 2px dotted greenyellow">' . $key . '</td>';

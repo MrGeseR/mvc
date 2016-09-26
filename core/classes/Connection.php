@@ -4,7 +4,7 @@ namespace core\classes;
 
 class Connection
 {
-    private static $pdo;
+    private static $_pdo;//
 
     private function __construct()
     {
@@ -19,15 +19,15 @@ class Connection
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC
         ];
-        self::$pdo = new \PDO($dsn, $params['user'], $params['password'], $opt);
+        self::$_pdo = new \PDO($dsn, $params['user'], $params['password'], $opt);
     }
 
     public static function getConnection()
     {
-        if (self::$pdo == null) {
+        if (self::$_pdo === null) {
             self::setConnection();
         }
-        return self::$pdo;
+        return self::$_pdo;
     }
 
     private function __clone()

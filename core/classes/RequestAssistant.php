@@ -6,92 +6,100 @@ trait RequestAssistant
 {
     protected $selectItems = '*';
     protected $conditions = [];
-    protected $prepare = [];
     protected $binding = [];
     protected $order = '';
     protected $alterConditions = [];
+    protected $allowed = ['>', '!=', '<', '>=', '<=', '='];
 
     public function __call($name, $arguments)
     {
-        $temp = str_replace('where', '', $name);
-        if (!strpos($temp, 'And')) {
-            $this->where(strtolower($temp), $arguments);
-        } else {
+        $or = false;
+        $temp = '';
+        if (str_replace('or', '', $name)) {
+            $temp = strtolower(str_replace('or', '', $name));
+            $or = true;
+        }
+        $temp = str_replace('where', '', $temp ?? $name);
+        if (strpos($temp, 'And')) {
             $fields = explode('And', $temp);
             $params = [];
             foreach ($fields as $key => $value) {
                 $params[$fields[$key]] = $arguments[$key];
             }
-            $this->where($params);
-
+            $this->where($or, $params);
+        } elseif ($temp === '') {
+            $this->where($or, $arguments);
+        } else {
+            $this->where($or, strtolower($temp), $arguments);
         }
+        return $this;
     }
 
 
     public function select(...$fields)
     {
-        if (is_array($fields[0])) {
-            $this->selectItems = implode(',', $fields[0]);
-            return true;
-        } elseif (is_string($fields[0])) {
-            $this->selectItems = implode(',', $fields);
-            return true;
-        } else {
-            return false;
-        }
+        $this->selectItems = implode(',', (is_array($fields[0])) ? $fields[0] : $fields);
+        return $this;
     }
 
     public function where(...$params)
     {
+        $or = false;
+        $conditions = [];
+        if ($params[0] === true) {
+            $params[0] = $params[1][0];
+            unset($params[1]);
+            $or = true;
+        }
+
         if (is_array($params[0])) {
             if (!isset($params[0][0])) {                                                                // если массив ассоциативный
                 foreach ($params[0] as $key => $value) {
-                    $temp = $this->bindings($key,$value);
-                    array_push($this->conditions, $key . '=' . $temp);
+                    $temp = $this->bindings($key, $value);
+                    array_push($conditions, $key . '=' . $temp);
                 }
-            } else {
-                $this->conditions = [];
-                die('Invalid params');
-            }
+            } else  die('Invalid params');
         } else {
-            if ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
-                $temp = $this->bindings($params[1], $params[3]);
-                $temp1 = $this->bindings($params[1], $params[4]);
-                array_push($this->conditions, $params[0]. ' BETWEEN ' . $temp . ' AND ' . $temp1);
-            } elseif
-            (count($params) === 2                                                              //если вид запроса ('id',1)
-            ) {
-                $temp = $this->bindings($params[0],$params[1]);
-                array_push($this->conditions, $params[0] .'='. $temp);
-            } elseif
-            (count($params) === 3
-            ) {                                                        //если вид запроса ('id','>=',1)
-                $temp = $this->bindings($params[0],$params[2]);
-                array_push($this->conditions, $params[0]. $params[1]. $temp);
+            $count = count($params);
+            if (($count === 4) && (strtolower($params[1]) == 'between')) {                            //если условие "between"
+                $from = $this->bindings($params[1], $params[3]);
+                $to = $this->bindings($params[1], $params[4]);
+                array_push($conditions, $params[0] . ' BETWEEN ' . $from . ' AND ' . $to);
+            } elseif ($count === 2) {
+                $temp = $this->bindings($params[0], $params[1]);
+                array_push($conditions, $params[0] . '=' . $temp);
+            } elseif ($count === 3) {                                                    //если вид запроса ('id','>=',1)
+                if (!in_array($params[1], $this->allowed)) {
+                    die('Invalid params');
+                }
+                $temp = $this->bindings($params[0], $params[2]);
+                array_push($conditions, $params[0] . $params[1] . $temp);
+            } else die('Invalid params');
+        }
+        foreach ($conditions as $key => $value) {
+            if ($or) {
+                $this->alterConditions[$key] = $value;
             } else {
-                $this->conditions = [];
-                die('Invalid params');
+                $this->conditions[$key] = $value;
             }
         }
         return $this;
-
     }
 
     public function bindings($field, $param)
     {
-        if(isset($this->binding[':'.$field])){
+        $bind = ':' . $field;
+        if (isset($this->binding[$bind])) {
             for ($i = 1; $i < 10; $i++) {
-                if(isset($this->binding[':'.$field.$i])){
-                    continue;
-                } else {
-                    $this->binding[':' . $field . $i] = $param;
+                if (!isset($this->binding[$bind . $i])) {
+                    $this->binding[$bind . $i] = $param;
                     break;
                 }
             }
-            return ':' . $field . $i;
+            return $bind . $i;
         } else {
-            $this->binding[':'.$field] = $param;
-            return ':'.$field;
+            $this->binding[$bind] = $param;
+            return $bind;
         }
 
     }
@@ -102,49 +110,13 @@ trait RequestAssistant
         return $this;
     }
 
-    public function orWhere(...$params)
-    {
-        if (is_array($params[0])) {
-            if (!isset($params[0][0])) {                                                                // если массив ассоциативный
-                foreach ($params[0] as $key => $value) {
-                    $temp = $this->bindings($key,$value);
-                    array_push($this->alterConditions, $key . '=' . $temp);
-                }
-            } else {
-                $this->alterConditions = [];
-                die('Invalid params');
-            }
-        } else {
-            if ((strtolower($params[1]) == 'between') && (count($params) === 4)) {             //если условие "between"
-                $temp = $this->bindings($params[1], $params[3]);
-                $temp1 = $this->bindings($params[1], $params[4]);
-                array_push($this->alterConditions, $params[0]. ' BETWEEN ' . $temp . ' AND ' . $temp1);
-            } elseif
-            (count($params) === 2                                                              //если вид запроса ('id',1)
-            ) {
-                $temp = $this->bindings($params[0],$params[1]);
-                array_push($this->alterConditions, $params[0] .'='. $temp);
-            } elseif
-            (count($params) === 3
-            ) {                                                        //если вид запроса ('id','>=',1)
-                $temp = $this->bindings($params[0],$params[2]);
-                array_push($this->alterConditions, $params[0]. $params[1]. $temp);
-            } else {
-                $this->alterConditions = [];
-                die('Invalid params');
-            }
-        }
-        return $this;
-    }
-
     public function orderBy(...$params)
     {
-        $this->order = 'ORDER BY ';
-        if ((is_array($params[0])) && (!isset($params[1]))) {                                     //если в параметрах массив
-            $count = 1;
+        $count = 1;
+        if (is_array($params[0])) {                             //если в параметрах массив
             foreach ($params[0] as $key => $value) {
                 if ($count === 1) {
-                    if (is_integer($key)) {
+                    if (is_numeric($key)) {
                         $this->order .= $value;
                     } elseif (strtolower($value) == 'desc') {
                         $this->order .= $key . ' DESC';
@@ -152,9 +124,7 @@ trait RequestAssistant
                         $this->order .= $key;
                     }
                     $count++;
-                    continue;
-                }
-                if (is_integer($key)) {
+                } elseif (is_numeric($key)) {
                     $this->order .= ',' . $value;
                 } elseif (strtolower($value) == 'desc') {
                     $this->order .= ',' . $key . ' DESC';
@@ -162,31 +132,24 @@ trait RequestAssistant
                     $this->order .= ',' . $key;
                 }
                 $count++;
-                continue;
             }
         } else {
-            $count = 1;
             foreach ($params as $key => $value) {
                 if ($count === 1) {
                     $this->order .= $value;
                     $count++;
-                    continue;
-                }
-                if (strtolower($value) === 'desc') {
+                } elseif (strtolower($value) === 'desc') {
                     $this->order .= ' DESC';
                     $count++;
-                    continue;
-                }
-                if (strtolower($value) === 'asc') {
+                } elseif (strtolower($value) === 'asc') {
                     $this->order .= ' ASC';
                     $count++;
-                    continue;
+                } else {
+                    $this->order .= ',' . $value;
+                    $count++;
                 }
-                $this->order .= ',' . $value;
-                $count++;
             }
         }
+        return $this;
     }
-
-
 }
