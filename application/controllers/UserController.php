@@ -12,7 +12,7 @@ class UserController extends BaseController
 
     public function __construct()
     {
-        $this->viewFolder = str_replace('controllers', 'views',__DIR__);
+        parent::__construct(__FILE__,$this);
         $this->user = new UserModel();
     }
 

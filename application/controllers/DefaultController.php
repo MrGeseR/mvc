@@ -2,8 +2,6 @@
 
 namespace application\controllers;
 
-//use application\models\DefaultModel;
-
 class DefaultController
 {
     public $defaultModel;

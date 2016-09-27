@@ -35,7 +35,7 @@ final class Router
 
     private function getParams($controller, $action, $params)
     {
-        $newParams = '';
+        $newParams = [];
         $a = new \ReflectionMethod($controller, $action);
         $wanted = $a->getParameters();
         for ($i = 0; $i < count($wanted);$i++){

@@ -10,6 +10,18 @@ trait RequestAssistant
     protected $order = '';
     protected $alterConditions = [];
     protected $allowed = ['>', '!=', '<', '>=', '<=', '='];
+    public $result;
+
+
+    public function getAll()
+    {
+        $stmt = $this->connection->prepare('SELECT * FROM ' . $this->tableName);
+        $stmt->execute();
+        $row = $stmt->fetchAll();
+        return $row;
+    }
+
+
 
     public function __call($name, $arguments)
     {
@@ -62,8 +74,8 @@ trait RequestAssistant
         } else {
             $count = count($params);
             if (($count === 4) && (strtolower($params[1]) == 'between')) {                            //если условие "between"
-                $from = $this->bindings($params[1], $params[3]);
-                $to = $this->bindings($params[1], $params[4]);
+                $from = $this->bindings($params[0], $params[2]);
+                $to = $this->bindings($params[0], $params[3]);
                 array_push($conditions, $params[0] . ' BETWEEN ' . $from . ' AND ' . $to);
             } elseif ($count === 2) {
                 $temp = $this->bindings($params[0], $params[1]);
@@ -78,8 +90,14 @@ trait RequestAssistant
         }
         foreach ($conditions as $key => $value) {
             if ($or) {
+                if (isset($this->alterConditions[$key])){
+                    $key = ' '.$key;
+                }
                 $this->alterConditions[$key] = $value;
             } else {
+                if (isset($this->conditions[$key])){
+                    $key = ' '.$key;
+                }
                 $this->conditions[$key] = $value;
             }
         }
@@ -90,12 +108,11 @@ trait RequestAssistant
     {
         $bind = ':' . $field;
         if (isset($this->binding[$bind])) {
-            for ($i = 1; $i < 10; $i++) {
-                if (!isset($this->binding[$bind . $i])) {
-                    $this->binding[$bind . $i] = $param;
-                    break;
-                }
+            $i = 1;
+            while (isset($this->binding[$bind . $i])) {
+                $i++;
             }
+            $this->binding[$bind . $i] = $param;
             return $bind . $i;
         } else {
             $this->binding[$bind] = $param;
@@ -151,5 +168,56 @@ trait RequestAssistant
             }
         }
         return $this;
+    }
+
+    public function get()
+    {
+        $result = [];
+        $where = '';
+        $orWhere = '';
+        $order = '';
+        if ($this->conditions) {
+            $where = ' WHERE ';
+            $countWhere = 1;
+            foreach ($this->conditions as $value) {
+                if ($countWhere === 1) {
+                    $where .= $value;
+                    $countWhere++;
+                    continue;
+                }
+                $where .= ' AND ' . $value;
+            }
+        }
+        if ($this->alterConditions) {
+            $orWhere = ' OR ';
+            $countOrWhere = 1;
+            foreach ($this->alterConditions as $value) {
+                if ($countOrWhere === 1) {
+                    $orWhere .= $value;
+                    $countOrWhere++;
+                    continue;
+                }
+                $orWhere .= ' AND ' . $value;
+            }
+        }
+        if ($this->order){
+            $order = ' ORDER BY ';
+        }
+        $stmt = $this->connection->prepare('SELECT ' . $this->selectItems . ' FROM ' . $this->tableName .
+            $where . $orWhere .$order. $this->order);
+        foreach ($this->binding as $key=>$value){
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute($this->binding);
+        $rows = $stmt->fetchAll();
+        foreach ($rows as $row){
+            $this->result = $row;
+            $result[] = clone $this;
+        }
+        $this->selectItems = '*';
+        $this->conditions = [];
+        $this->alterConditions = [];
+        $this->order = '';
+        return $result;
     }
 }
