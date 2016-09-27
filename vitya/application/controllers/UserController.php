@@ -12,7 +12,7 @@ class UserController extends BaseController
 
     public function __construct()
     {
-        parent::__construct(__FILE__,$this);
+        parent::__construct(__FILE__,$this);//@todo ??????
         $this->user = new UserModel();
     }
 

@@ -9,9 +9,9 @@ class Config
 
     }
 
-    protected function __clone()
+    private function __clone()
     {
-        // TODO: Implement __clone() method.
+
     }
 
     public static function get($key, $default = null)
@@ -22,7 +22,7 @@ class Config
         return $default;
     }
 
-    public static function set($key, $value)
+    public static function set($key, $value)//@todo не должно переписывать
     {
         self::$_data[$key] = $value;
     }

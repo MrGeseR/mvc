@@ -10,6 +10,3 @@
         </tr>
     <?php endforeach;?>
 </table>
-<?php
-$timeEnd = microtime();
-echo $timeEnd - Config::get('time_start');
