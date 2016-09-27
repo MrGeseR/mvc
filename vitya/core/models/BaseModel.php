@@ -8,7 +8,7 @@ class BaseModel extends Database
 {
     public function __construct()
     {
-        parent::__construct($this);
+        parent::__construct($this);//@todo убрать
     }
 
 }

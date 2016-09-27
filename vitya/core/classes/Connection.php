@@ -4,15 +4,13 @@ namespace core\classes;
 
 class Connection
 {
-    private static $_pdo;//
+    private static $_pdo;
 
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     private static function setConnection()
     {
-        $params = require_once '../core/configs/db.php';
+        $params = require_once '../core/configs/db.php';//@todo нужны абсолютные путь, конфиг должен быть в папке configs
         \PDO::MYSQL_ATTR_INIT_COMMAND;
         $dsn = "mysql:host=" . $params['host'] . ";dbname=" . $params['database'];
         $opt = [
@@ -30,17 +28,10 @@ class Connection
         return self::$_pdo;
     }
 
-    private function __clone()
-    {
-    }
+    private function __clone() {}
 
-    private function __sleep()
-    {
-    }
+    private function __sleep() {}
 
-    private function __wakeup()
-    {
-    }
-
+    private function __wakeup() {}
 
 }

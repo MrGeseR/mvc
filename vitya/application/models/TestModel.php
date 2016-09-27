@@ -10,7 +10,7 @@ class TestModel extends BaseModel
 
     public function __construct()
     {
-        parent::__construct($this);
+        parent::__construct($this);//@todo parent::__construct без пареметров
     }
 
 }

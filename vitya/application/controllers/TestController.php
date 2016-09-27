@@ -16,10 +16,25 @@ class TestController extends BaseController
     {
         $data = (new TestModel())
             ->select(['id', 'name', 'age', 'text', 'created_at', 'updated_at'])
-            ->where('id', '!=', 100000)
+//            ->whereIdAndName(1, 'jora')
+//            ->orWhere('id', 100000)
             ->whereBetween('id', $from, $to)
-            ->orderBy('id', 'desc')
+            ->orderBy([
+                'id' => 'desc',
+                'name',
+                'age' => 'asc',
+            ])
             ->get();
+
+        $data1 = (new TestModel())
+            ->where('id', 1)
+            ->orderBy([
+                'id' => 'desc',
+                'name',
+                'age' => 'asc',
+            ])
+            ->get();
+
         return $this->view('index', [
             'response' => $data,
         ]);
