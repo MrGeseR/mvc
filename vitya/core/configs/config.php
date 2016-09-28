@@ -22,9 +22,13 @@ class Config
         return $default;
     }
 
-    public static function set($key, $value)//@todo не должно переписывать
+    public static function set($key, $value)
     {
-        self::$_data[$key] = $value;
+        if(!isset(self::$_data[$key])) {
+            self::$_data[$key] = $value;
+        } else {
+            die($key . 'is already set!');
+        }
     }
 
     private function __sleep()

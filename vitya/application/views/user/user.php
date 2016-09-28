@@ -20,14 +20,6 @@ if (!$result){
     echo '';
 } else {
     echo '<table style="border-collapse: collapse ">';
-//    $count = 1;
-//    foreach ($result as $key => $value) {
-//        if ($count === 1) {
-//            echo '<td style="border: 2px dotted greenyellow">' . $key . '</td>';
-//        }
-//        break;
-//    }
-
     foreach ($params['result'] as $key => $value) {
         echo '<tr>';
         foreach ($value as $field => $item) {

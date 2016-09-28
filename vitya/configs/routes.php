@@ -1,4 +1,5 @@
 <?php
 return [
-    '' => 'default/default',//@todo ??????
+    'DefaultController' => 'user',
+    'DefaultAction' => 'actionIndex'
 ];

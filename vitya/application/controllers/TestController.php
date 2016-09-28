@@ -9,7 +9,7 @@ class TestController extends BaseController
 {
     public function __construct()
     {
-        parent::__construct(__FILE__,$this);
+        $this->getViewFolder(__FILE__);
     }
 
     public function actionIndex($from, $to)
@@ -26,14 +26,14 @@ class TestController extends BaseController
             ])
             ->get();
 
-        $data1 = (new TestModel())
-            ->where('id', 1)
-            ->orderBy([
-                'id' => 'desc',
-                'name',
-                'age' => 'asc',
-            ])
-            ->get();
+//        $data1 = (new TestModel())
+//            ->where('id', 1)
+//            ->orderBy([
+//                'id' => 'desc',
+//                'name',
+//                'age' => 'asc',
+//            ])
+//            ->get();
 
         return $this->view('index', [
             'response' => $data,

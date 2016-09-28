@@ -12,7 +12,7 @@ class UserController extends BaseController
 
     public function __construct()
     {
-        parent::__construct(__FILE__,$this);//@todo ??????
+        $this->getViewFolder(__FILE__);
         $this->user = new UserModel();
     }
 
@@ -24,11 +24,11 @@ class UserController extends BaseController
 
 
 
-    public function actionIndex($id)
+    public function actionIndex()
     {
         $row = $this->user
 //
-            ->where('id', '=', $id)
+            ->orWhere('id', '=', 4)
 //            ->orWhere(['id' => 1])
             ->get();
 

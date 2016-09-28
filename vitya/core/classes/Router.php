@@ -9,7 +9,7 @@ final class Router
 
     public function __construct()
     {
-        $this->routes = include '../configs/routes.php';//@todo абсолютные пути
+        $this->routes = include \Config::get('ROOT').'configs/routes.php';
     }
 
     private function getActionName($name)
@@ -38,8 +38,9 @@ final class Router
         $newParams = [];
         $a = new \ReflectionMethod($controller, $action);
         $wanted = $a->getParameters();
-        for ($i = 0; $i < count($wanted); $i++) {//@todo count($wanted) вынести
-            if (key_exists($wanted[$i]->name, $params)) { //@todo isset() нам null не подходит
+        $count = count($wanted);
+        for ($i = 0; $i < $count; $i++) {
+            if (isset($params[$wanted[$i]->name])) {
                 $newParams[] = $params[$wanted[$i]->name];
             } else {
                 die('U must enter ' . $wanted[$i]->name);
@@ -48,7 +49,7 @@ final class Router
         $controller->$action(...$newParams);
     }
 
-    private function Methods($parts, $params = [])//@todo methods
+    private function methods($parts, $params = [])
     {
         $count = count($parts);
 
@@ -68,16 +69,14 @@ final class Router
         }
     }
 
-    public function parseUrl($url)
+    public function parseUrl()
     {
+        $url = substr($_SERVER['REQUEST_URI'], 1);
         if (strpos($url, '?')) {
-            $uri = parse_url($url)['path'];//@todo parse_url($url) дублирование
+            $uri = parse_url($url)['path'];
             parse_str(parse_url($url)['query'], $params);
         }
-        /* $parseUrl = parse_url($url);
-        if (isset($parseUrl['query'])) {
-            parse_str($parseUrl['query'], $params);
-        }*///@todo вместо $uri => $parseUrl['path']
+
         $uri = $uri ?? $url;//
         $params = $params ?? [];
         if ($uri == '') {
@@ -85,14 +84,14 @@ final class Router
         } else {
             $parts = explode('/', $uri);
         }
-        $this->Methods($parts, $params);
+        $this->methods($parts, $params);
     }
 
-    private function defaultAction($params = [])//@todo 91-121 вынести общее
+    private function defaultAction($params = [])
     {
-        $controller = $this->getController(\Config::get('DefaultController'));//@todo из файла
+        $controller = $this->getController(\Config::get('DefaultController'));//@todo из файла   ты говорил что из конфига
         $controllerObject = new $controller();
-        $actionName = $this->getActionName(\Config::get('DefaultAction'));//@todo из файла
+        $actionName = $this->getActionName(\Config::get('DefaultAction'));//@todo из файла       ты говорил что из конфига
         $this->getParams($controllerObject, $actionName, $params);
     }
 
@@ -100,7 +99,7 @@ final class Router
     {
         $controller = $this->getController($parts[0]);
         $controllerObject = new $controller();
-        $this->getParams($controllerObject, 'actionIndex', $params);//@todo actionIndex например в константу и через getActionName('index')
+        $this->getParams($controllerObject, (\Config::get('DefaultAction')), $params);
     }
 
     private function controllerWithAction($parts, $params = [])

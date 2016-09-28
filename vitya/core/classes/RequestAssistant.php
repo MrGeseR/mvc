@@ -13,35 +13,45 @@ trait RequestAssistant
 
     public $result;
 
-    public function getAll()//@todo return массив обьектов, если был вызван любой другой метод, то кидать exception (where(), select(), orderBy())
+    public function getAll()
     {
-        $stmt = $this->connection->prepare('SELECT * FROM ' . $this->tableName);
-        $stmt->execute();
-        $row = $stmt->fetchAll();
-        return $row;
+        $result = [];
+        if (!$this->binding && !$this->order && !$this->selectItems) {
+            $stmt = $this->connection->prepare('SELECT * FROM ' . $this->tableName);
+            $stmt->execute();
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $row) {
+                $this->result = $row;
+                $result[] = clone $this;
+            }
+            return $result;
+        } else die('Another method(s) was called!');
     }
 
-    public function __call($name, $arguments) //@todo принимает любой метод, например ->adffd() и попадает на 44 строку (else)
+    public function __call($name, $arguments)
     {
-        $or = false;
-        $temp = '';
-        if (str_replace('or', '', $name)) { //@todo всегда true
-            $temp = strtolower(str_replace('or', '', $name));//@todo повтор
-            $or = true;
+        if (strpos(strtolower($name), 'where') === false) {
+            die('Invalid function called!');
         }
-        //@todo $or всегда true, неправильное условие
-        $temp = str_replace('where', '', $temp ?? $name);//@todo $temp всегда isset
-        if (strpos($temp, 'And')) {//@todo всегда false из за 29 строки
-            $fields = explode('And', $temp);
+        $or = '';
+        $temp = '';
+        $name = strtolower($name);
+        if (is_int(strpos($name, 'or'))) {
+            $temp = str_replace('or', '', $name);
+            $or = 'or';
+        }
+        $temp = str_replace('where', '', $temp ? $temp : $name);
+        if (strpos($temp, 'and')) {
+            $fields = explode('and', $temp);
             $params = [];
             foreach ($fields as $key => $value) {
                 $params[$fields[$key]] = $arguments[$key];
             }
             $this->where($or, $params);
-        } elseif ($temp === '') {//@todo попадет если будет вызван метод or() и все
-            $this->where($or, $arguments);
-        } else { //@todo вызываеть на любой вызов кроме or()
-            $this->where($or, strtolower($temp), $arguments);
+        } elseif ($temp === '') {
+            $this->where($or, ...$arguments);
+        } else {
+            $this->where($or, strtolower($temp), ...$arguments);
         }
 
         return $this;
@@ -53,24 +63,19 @@ trait RequestAssistant
         return $this;
     }
 
-    public function where(...$params)//@todo должен быть метод orWhere()
+    public function where($or, ...$params)
     {
-        $or = false;
         $conditions = [];
 
-        if ($params[0] === true) {//@todo в случае с __call() первый параметр будет true or false
-            $params[0] = $params[1][0];
-            unset($params[1]);
-            $or = true;
-        }
         if (is_array($params[0])) {
-            if (!isset($params[0][0])) { // если массив ассоциативный
+            if (!isset($params[0][0])) {    // если массив ассоциативный
                 foreach ($params[0] as $key => $value) {
-                    $temp = $this->bindings($key, $value);
-                    array_push($conditions, $key . '=' . $temp);
+                    $bind = $this->bindings($key, $value);
+                    array_push($conditions, $key . '=' . $bind);
                 }
-            } else  {
-                die('Invalid params');
+
+            } else {
+                die('Invalid params (isArray)');
             }
         } else {
             $count = count($params);
@@ -79,16 +84,16 @@ trait RequestAssistant
                 $to = $this->bindings($params[0], $params[3]);
                 array_push($conditions, $params[0] . ' BETWEEN ' . $from . ' AND ' . $to);
             } elseif ($count === 2) {
-                $temp = $this->bindings($params[0], $params[1]);
-                array_push($conditions, $params[0] . '=' . $temp);
+                $bind = $this->bindings($params[0], $params[1]);
+                array_push($conditions, $params[0] . '=' . $bind);
             } elseif ($count === 3) {//если вид запроса ('id','>=',1)
                 if (!in_array($params[1], $this->allowed)) {
-                    die('Invalid params');
+                    die('Invalid params id=>1 ');
                 }
-                $temp = $this->bindings($params[0], $params[2]);
-                array_push($conditions, $params[0] . $params[1] . $temp);
+                $bind = $this->bindings($params[0], $params[2]);
+                array_push($conditions, $params[0] . $params[1] . $bind);
             } else {
-                die('Invalid params');//@todo метод  ->orWhere('id', 100000) попадает вот сюда
+                die('Invalid params');
             }
         }
         foreach ($conditions as $key => $value) {
@@ -112,11 +117,12 @@ trait RequestAssistant
         $bind = ':' . $field;
         if (isset($this->binding[$bind])) {
             $i = 1;
-            while (isset($this->binding[$bind . $i])) {
+            $bindNumber = $bind . $i;
+            while (isset($this->binding[$bindNumber])) {
                 $i++;
             }
-            $this->binding[$bind . $i] = $param;//@todo $bind . $i повторение
-            return $bind . $i;
+            $this->binding[$bindNumber] = $param;
+            return $bindNumber;
         } else {
             $this->binding[$bind] = $param;
             return $bind;
@@ -124,16 +130,22 @@ trait RequestAssistant
 
     }
 
-    public function whereBetween($field, $min, $max) //@todo orWhereBetween()??
+    public function whereBetween($field, $min, $max)
     {
-        $this->where($field, 'between', $min, $max);
+        $this->where('', $field, 'between', $min, $max);
+        return $this;
+    }
+
+    public function orWhereBetween($field, $min, $max)
+    {
+        $this->where('or', $field, 'between', $min, $max);
         return $this;
     }
 
     public function orderBy(...$params)
     {
         $count = 1;
-        if (is_array($params[0])) {//если в параметрах массив
+        if (is_array($params[0])) {                    //если в параметрах массив
             foreach ($params[0] as $key => $value) {
                 if ($count === 1) {
                     if (is_numeric($key)) {
@@ -143,7 +155,8 @@ trait RequestAssistant
                     } else {
                         $this->order .= $key;
                     }
-                    $count++;//@todo увеличится 2 раза
+                    $count++;
+                    continue;
                 } elseif (is_numeric($key)) {
                     $this->order .= ',' . $value;
                 } elseif (strtolower($value) == 'desc') {
@@ -153,15 +166,6 @@ trait RequestAssistant
                 }
                 $count++;
             }
-            /*foreach ($params[0] as $key => $value) { //@todo нет дублирования
-                if (is_numeric($key)) {
-                    $order = $value;
-                } else {
-                    $order = $key . ' ' . $value;
-                }
-                $this->order .= ($count === 1) ? $order :',' . $order;
-                $count++;
-            }*/
         } else {
             foreach ($params as $key => $value) {
                 if ($count === 1) {
@@ -173,13 +177,6 @@ trait RequestAssistant
                 } else {
                     $this->order .= ',' . $value;
                 }
-                /*if ($count === 1) { //@todo на одно условие меньше
-                    $this->order .= $value;
-                } elseif (in_array(strtolower($value), ['desc', 'asc'])) {
-                    $this->order .= $value;
-                } else {
-                    $this->order .= ',' . $value;
-                }*/
                 $count++;
             }
         }
@@ -187,11 +184,10 @@ trait RequestAssistant
         return $this;
     }
 
-    public function get()
+    protected function prepare()
     {
-        $result = [];
-        $where = $orWhere = $order = '';//@todo если поэтапно собирать запрос сразу в одну переменню то это переменные не нужны
-        if ($this->conditions) {//@todo 195-218 вынести логику
+        $where = $orWhere = $order = '';
+        if ($this->conditions) {
             $where = ' WHERE ';
             $countWhere = 1;
             foreach ($this->conditions as $value) {
@@ -216,20 +212,25 @@ trait RequestAssistant
             }
         }
         if ($this->order) {
-            $order = ' ORDER BY ';
+            $order = ' ORDER BY ' . $this->order;
         }
+        return [$where, $orWhere, $order];
+    }
+
+    public function get()
+    {
+        $result = [];
+        $prepare = $this->prepare();
         $stmt = $this->connection->prepare('SELECT ' . $this->selectItems . ' FROM ' . $this->tableName .
-            $where . $orWhere . $order . $this->order);//@todo если !$where то $orWhere не конкатенировать
-        foreach ($this->binding as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute($this->binding);//@todo второй биндинг
+            $prepare[0] . $prepare[1] . $prepare[2]);
+
+        $stmt->execute($this->binding);
         $rows = $stmt->fetchAll();
         foreach ($rows as $row) {
             $this->result = $row;
             $result[] = clone $this;
         }
-        $this->selectItems = '*';//@todo ??
+        $this->selectItems = '*';//@todo ??           обнуляю значения на дефолтные
         $this->conditions = [];
         $this->alterConditions = [];
         $this->order = '';

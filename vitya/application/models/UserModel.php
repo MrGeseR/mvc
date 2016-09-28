@@ -11,7 +11,8 @@ class UserModel extends BaseModel
 
     public function __construct()
     {
-        parent::__construct($this);
+        $this->getTableName();
+        $this->connection();
 
     }
 

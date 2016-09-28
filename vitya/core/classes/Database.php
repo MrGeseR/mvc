@@ -9,15 +9,21 @@ class Database
     protected $connection;
     protected $tableName;
 
-    public function __construct($obj)//@todo убрать $obj === $this
+    public function __construct()
     {
-        //@todo get_class($obj)===get_called_class()
-        $this->connection = Connection::getConnection();
-        //@todo в отдельный метод
-        $namespaceLength = strripos(get_class($obj), '\\') + 1; // 1 - это символ "\"
-        $temp = substr(get_class($obj), $namespaceLength);
+    }
+
+    public function getTableName()
+    {
+        $namespaceLength = strripos(get_called_class(), '\\') + 1; // 1 - это символ "\"
+        $temp = substr(get_called_class(), $namespaceLength);
         $temp = str_replace('Model', '', $temp);
-        $this->tableName = strtolower($temp);
+        return $this->tableName = strtolower($temp);
+    }
+
+    public function connection()
+    {
+        $this->connection = Connection::getConnection();
     }
 
 }

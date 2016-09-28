@@ -2,7 +2,7 @@
 
 return [//@todo переместить в конфиги
     'user' => 'root',
-    'password' => '123qwe',
+    'password' => '++-+-+-',
     'host' => 'localhost',
     'database' => 'test',
 ];
