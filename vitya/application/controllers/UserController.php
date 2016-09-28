@@ -28,8 +28,8 @@ class UserController extends BaseController
     {
         $row = $this->user
 //
-            ->orWhere('id', '=', 4)
-//            ->orWhere(['id' => 1])
+            ->where('id', 4)
+            ->orWhere(['id' => 1])
             ->get();
 
         return $this->view('user', [

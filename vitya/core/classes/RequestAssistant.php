@@ -33,12 +33,12 @@ trait RequestAssistant
         if (strpos(strtolower($name), 'where') === false) {
             die('Invalid function called!');
         }
-        $or = '';
+        $operator = ' AND ';
         $temp = '';
         $name = strtolower($name);
-        if (is_int(strpos($name, 'or'))) {
+        if (strpos($name, 'or') !== false) {
             $temp = str_replace('or', '', $name);
-            $or = 'or';
+            $operator = ' OR ';
         }
         $temp = str_replace('where', '', $temp ? $temp : $name);
         if (strpos($temp, 'and')) {
@@ -47,11 +47,11 @@ trait RequestAssistant
             foreach ($fields as $key => $value) {
                 $params[$fields[$key]] = $arguments[$key];
             }
-            $this->where($or, $params);
+            $this->endWhere($operator, $params);
         } elseif ($temp === '') {
-            $this->where($or, ...$arguments);
+            $this->endWhere($operator, ...$arguments);
         } else {
-            $this->where($or, strtolower($temp), ...$arguments);
+            $this->endWhere($operator, strtolower($temp), ...$arguments);
         }
 
         return $this;
@@ -63,19 +63,30 @@ trait RequestAssistant
         return $this;
     }
 
-    public function where($or, ...$params)
+    public function where(...$params)
+    {
+        $this->endWhere(' AND ', ...$params);
+        return $this;
+
+    }
+
+    public function orWhere(...$params)
+    {
+        $this->endWhere(' OR ', ...$params);
+        return $this;
+    }
+
+    public function endWhere($operator, ...$params)
     {
         $conditions = [];
-
         if (is_array($params[0])) {
             if (!isset($params[0][0])) {    // если массив ассоциативный
                 foreach ($params[0] as $key => $value) {
                     $bind = $this->bindings($key, $value);
                     array_push($conditions, $key . '=' . $bind);
                 }
-
             } else {
-                die('Invalid params (isArray)');
+                die('Invalid Array');
             }
         } else {
             $count = count($params);
@@ -97,19 +108,22 @@ trait RequestAssistant
             }
         }
         foreach ($conditions as $key => $value) {
-            if ($or) {
+            if ($operator === ' OR ') {
                 if (isset($this->alterConditions[$key])) {
-                    $key = ' ' . $key;//@todo ????
+                    $key = ' ' . $key;
                 }
                 $this->alterConditions[$key] = $value;
-            } else {
+            } elseif ($operator === ' AND ') {
                 if (isset($this->conditions[$key])) {
-                    $key = ' ' . $key;//@todo ????
+                    $key = ' ' . $key;
                 }
-                $this->conditions[$key] = $value;
+                if (!$this->conditions) {
+                    $this->conditions[' WHERE '.$key] = $value;
+                } else {
+                    $this->conditions[$operator.$key] = $value;
+                }
             }
         }
-        return $this;
     }
 
     public function bindings($field, $param)
@@ -132,13 +146,13 @@ trait RequestAssistant
 
     public function whereBetween($field, $min, $max)
     {
-        $this->where('', $field, 'between', $min, $max);
+        $this->endWhere(' AND ', $field, 'between', $min, $max);
         return $this;
     }
 
     public function orWhereBetween($field, $min, $max)
     {
-        $this->where('or', $field, 'between', $min, $max);
+        $this->endWhere(' OR ', $field, 'between', $min, $max);
         return $this;
     }
 
@@ -223,7 +237,6 @@ trait RequestAssistant
         $prepare = $this->prepare();
         $stmt = $this->connection->prepare('SELECT ' . $this->selectItems . ' FROM ' . $this->tableName .
             $prepare[0] . $prepare[1] . $prepare[2]);
-
         $stmt->execute($this->binding);
         $rows = $stmt->fetchAll();
         foreach ($rows as $row) {

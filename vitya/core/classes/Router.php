@@ -36,6 +36,7 @@ final class Router
     private function getParams($controller, $action, $params)
     {
         $newParams = [];
+        $action = $this->getActionName($action);
         $a = new \ReflectionMethod($controller, $action);
         $wanted = $a->getParameters();
         $count = count($wanted);
@@ -89,32 +90,29 @@ final class Router
 
     private function defaultAction($params = [])
     {
-        $controller = $this->getController(\Config::get('DefaultController'));//@todo из файла   ты говорил что из конфига
+        $controller = $this->getController($this->routes['DefaultController']);
         $controllerObject = new $controller();
-        $actionName = $this->getActionName(\Config::get('DefaultAction'));//@todo из файла       ты говорил что из конфига
-        $this->getParams($controllerObject, $actionName, $params);
+        $this->getParams($controllerObject, ($this->routes['DefaultAction']), $params);
     }
 
     private function controller($parts, $params = [])
     {
         $controller = $this->getController($parts[0]);
         $controllerObject = new $controller();
-        $this->getParams($controllerObject, (\Config::get('DefaultAction')), $params);
+        $this->getParams($controllerObject, ($this->routes['DefaultAction']), $params);
     }
 
     private function controllerWithAction($parts, $params = [])
     {
         $controller = $this->getController($parts[0]);
         $controllerObject = new $controller();
-        $actionName = $this->getActionName($parts[1]);
-        $this->getParams($controllerObject, $actionName, $params);
+        $this->getParams($controllerObject, $parts[1], $params);
     }
 
     private function module($parts, $params = [])
     {
         $controller = $this->getController($parts[1], $parts[0]);
         $controllerObject = new $controller();
-        $actionName = $this->getActionName($parts[2]);
-        $this->getParams($controllerObject, $actionName, $params);
+        $this->getParams($controllerObject, $parts[2], $params);
     }
 }

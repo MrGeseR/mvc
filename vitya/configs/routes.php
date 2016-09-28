@@ -1,5 +1,5 @@
 <?php
 return [
     'DefaultController' => 'user',
-    'DefaultAction' => 'actionIndex'
+    'DefaultAction' => 'index'
 ];
